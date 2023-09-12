@@ -109,15 +109,15 @@ volumes:
   data:
     driver: local-persist
     driver_opts:
-      mountpoint: /opt/beget/superset/data
+      mountpoint: /opt/data_project/superset/data
   postgres:
     driver: local-persist
     driver_opts:
-      mountpoint: /opt/beget/superset/postgres
+      mountpoint: /opt/data_project/superset/postgres
   redis:
     driver: local-persist
     driver_opts:
-      mountpoint: /opt/beget/superset/redis
+      mountpoint: /opt/data_project/superset/redis
 
 networks:
   superset:

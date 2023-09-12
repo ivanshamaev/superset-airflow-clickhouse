@@ -170,11 +170,11 @@ volumes:
   postgres:
     driver: local-persist
     driver_opts:
-      mountpoint: /opt/beget/airflow/postgres
+      mountpoint: /opt/data_project/airflow/postgres
   redis:
     driver: local-persist
     driver_opts:
-      mountpoint: /opt/beget/airflow/redis
+      mountpoint: /opt/data_project/airflow/redis
 
 networks:
   airflow:
