@@ -1,0 +1,126 @@
+---
+version: "3.7"
+
+x-superset-image: &superset-image apache/superset:2.1.0
+x-superset-env-file: &superset-env-file .env
+x-superset-networks: &superset-networks
+  - superset
+  - clickhouse
+x-superset-volumes: &superset-volumes
+  - ./docker:/app/docker
+  - data:/app/superset_home
+  - /etc/letsencrypt:/etc/letsencrypt
+x-superset-depends-on: &superset-depends-on
+  superset-redis:
+    condition: service_healthy
+  superset-db:
+    condition: service_healthy
+
+services:
+  superset-redis:
+    image: redis:7.0.10
+    container_name: superset_cache
+    restart: always
+    volumes:
+      - redis:/data
+    networks: *superset-networks
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  superset-db:
+    image: postgres:15.2
+    container_name: superset_db
+    env_file: *superset-env-file
+    restart: always
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    networks: *superset-networks
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  superset:
+    image: *superset-image
+    container_name: superset_app
+    env_file: *superset-env-file
+    command: ["/app/docker/docker-bootstrap.sh", "app-gunicorn"]
+    user: "root"
+    restart: always
+    ports:
+      - 8088:8088
+    networks: *superset-networks
+    depends_on: *superset-depends-on
+    volumes: *superset-volumes
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "-k", "https://localhost:8088/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  superset-init:
+    image: *superset-image
+    container_name: superset_init
+    command: ["/app/docker/docker-init.sh"]
+    env_file: *superset-env-file
+    depends_on: *superset-depends-on
+    user: "root"
+    volumes: *superset-volumes
+    networks: *superset-networks
+    healthcheck:
+      disable: true
+
+  superset-worker:
+    image: *superset-image
+    container_name: superset_worker
+    command: ["/app/docker/docker-bootstrap.sh", "worker"]
+    env_file: *superset-env-file
+    restart: always
+    depends_on: *superset-depends-on
+    user: "root"
+    volumes: *superset-volumes
+    networks: *superset-networks
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A superset.tasks.celery_app:app inspect ping -d celery@$$HOSTNAME"]
+      interval: 60s
+      timeout: 60s
+      retries: 10
+      start_period: 60s
+
+  superset-worker-beat:
+    image: *superset-image
+    container_name: superset_worker_beat
+    command: ["/app/docker/docker-bootstrap.sh", "beat"]
+    env_file: *superset-env-file
+    restart: always
+    depends_on: *superset-depends-on
+    user: "root"
+    volumes: *superset-volumes
+    networks: *superset-networks
+    healthcheck:
+      disable: true
+
+volumes:
+  data:
+    driver: local-persist
+    driver_opts:
+      mountpoint: /opt/beget/superset/data
+  postgres:
+    driver: local-persist
+    driver_opts:
+      mountpoint: /opt/beget/superset/postgres
+  redis:
+    driver: local-persist
+    driver_opts:
+      mountpoint: /opt/beget/superset/redis
+
+networks:
+  superset:
+    name: superset
+  clickhouse:
+    external: true

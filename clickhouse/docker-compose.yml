@@ -1,0 +1,36 @@
+---
+version: '3.7'
+
+services:
+  clickhouse:
+    image: docker.io/bitnami/clickhouse:23.3.1
+    restart: always
+    container_name: clickhouse
+    env_file: .env
+    volumes:
+      - data:/bitnami/clickhouse
+      - /etc/letsencrypt:/etc/letsencrypt
+      - ./config.xml:/opt/bitnami/clickhouse/etc/config.xml
+      - ./users.xml:/opt/bitnami/clickhouse/etc/users.d/users.xml
+    ports:
+      - 127.0.0.1:${CLICKHOUSE_HTTPS_PORT}:${CLICKHOUSE_HTTPS_PORT}
+      - 127.0.0.1:${CLICKHOUSE_TCP_SECURE_PORT}:${CLICKHOUSE_TCP_SECURE_PORT}
+    networks:
+      - clickhouse
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "clickhouse status"
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  data:
+    driver: local-persist
+    driver_opts:
+      mountpoint: /opt/beget/clickhouse/data
+
+networks:
+  clickhouse:
+    name: clickhouse

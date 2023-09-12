@@ -1,0 +1,8 @@
+<clickhouse>
+    <profiles>
+        <default>
+            <send_timeout from_env="CLICKHOUSE_SEND_TIMEOUT"/>
+            <receive_timeout from_env="CLICKHOUSE_RECEIVE_TIMEOUT"/>
+        </default>
+    </profiles>
+</clickhouse>
